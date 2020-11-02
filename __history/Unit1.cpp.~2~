@@ -1,0 +1,301 @@
+//---------------------------------------------------------------------------
+
+#include <vcl.h>
+#pragma hdrstop
+
+#include "Unit1.h"
+#include "Unit2.h"
+#include "Unit3.h"
+#include "Unit4.h"
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+#pragma resource "*.dfm"
+TForm1 *Form1;
+TStringList *Pictures = new TStringList; // список jpg-файлов
+AnsiString aPath; // путь к IMAGE-файлам
+int n; // номер отображаемой иллюстрации
+//---------------------------------------------------------------------------
+__fastcall TForm1::TForm1(TComponent* Owner)
+	: TForm(Owner)
+{
+	//ScrollBox1->SetFocus();
+	TSearchRec sr;
+	SpeedButton2->Enabled = false;
+	SpeedButton3->Enabled = false;
+	aPath = Application->GetNamePath();
+	if ( FindFirst(aPath+ "*.jpg",faAnyFile, sr) == 0 )
+	{
+	Image1->Picture->LoadFromFile(sr.Name);
+	}
+	//---------ТУТ НЕМНОГО НЕПОНЯТНО-----------------------------------------
+	if ( FindFirst(aPath+ "*.tif",faAnyFile, sr) == 0 )
+	{
+	Image1->Picture->LoadFromFile(sr.Name);
+	}
+	//-----------------------------------------------------------------------
+}
+//---------------------------------------------------------------------------
+void __fastcall TForm1::SpeedButton1Click(TObject *Sender)
+{
+	int r,t;
+	TSearchRec aSearchRec; // результат поиска файла
+	Pictures->Clear();  // очистить список иллюстраций
+	Form1->Image1->Picture->Graphic = NULL; //удалить последнюю отображаемую картинку
+	//const SELDIRHELP = 0;
+	AnsiString file = ExtractFilePath(Application->ExeName) + "\\settings.dat";
+	TStringList *list1 = new TStringList;  // 1й TStringLis
+	list1->LoadFromFile(file);
+
+	String Dir;
+	Dir = list1->Strings[0];
+	//String Dir = "\\\\192.168.2.222\\fonds";
+
+
+
+	Form4 = new TForm4( this );
+	try {
+	  Form4->ShowModal();
+	} __finally {
+	  Form4->Free();
+	}
+
+
+
+
+
+
+
+	if(SelectDirectory("Выберите папку","",Dir))
+	{
+		//OpenDialog1->InitialDir = Dir;
+		aPath = "";
+		aPath = Dir + "\\" +aPath;
+		Form1->Caption = "Просмотр страниц — " + aPath;
+		// сформировать список иллюстраций
+		r = FindFirst(aPath+"*.jpg",faAnyFile,aSearchRec);
+		if ( r == 0 )
+		{
+			// в указанном каталоге есть jpg-файл
+			Pictures->Clear(); // очистить список иллюстраций
+			Pictures->Add(aSearchRec.Name); // добавить имя файла
+											// в список иллюстраций
+		}
+		// получить имена остальных jpg-файлов
+		do
+		{
+			r = FindNext(aSearchRec); // имя следующего jpg-файла
+			if (r == 0 )
+			Pictures->Add(aSearchRec.Name);
+		}
+		while ( r == 0 );
+
+		//-----------ДЛЯ TIF-файлов------------------------------------------
+		// сформировать список иллюстраций
+		t = FindFirst(aPath+"*.tif",faAnyFile,aSearchRec);
+		if ( t == 0 )
+		{
+			// в указанном каталоге есть tif-файл
+			Pictures->Add(aSearchRec.Name); // добавить имя файла
+											// в список иллюстраций
+		}
+		// получить имена остальных tif-файлов
+		do
+		{
+			t = FindNext(aSearchRec); // имя следующего tif-файла
+			if (t == 0 )
+			Pictures->Add(aSearchRec.Name);
+		}
+		while ( t == 0 );
+		//-------------------------------------------------------------------
+
+		if (Pictures->Count > 1 )
+			SpeedButton2->Enabled = true;
+		Pictures->Sorted = true;
+		// отобразить иллюстрацию
+		n = 0; // номер отображаемой иллюстрации
+		//построение списка в панели
+		ListBox1->ItemIndex = n;
+		ListBox1->Items = Pictures;
+		try
+		{
+			Image1->Picture->LoadFromFile(aPath + Pictures->Strings[n]);
+		}
+		catch ( EInvalidGraphic &e)
+		{
+			Form1->Image1->Picture->Graphic = NULL;
+			return;
+		}
+		Form1->Caption = "Просмотр страниц — " +
+		aPath + Pictures->Strings[n];
+		if ( Pictures->Count == 1)
+			SpeedButton2->Enabled = false;
+	}  //конец диалога выбора папки и формирования списка
+
+
+
+
+
+
+
+
+	delete list1;
+	ListBox1->ItemIndex = n;
+}
+//---------------------------------------------------------------------------
+
+// вывод следующей картинки
+void __fastcall TForm1::SpeedButton2Click(TObject *Sender)
+{
+	// вывести картинку
+	n++;
+	try
+	{
+	Image1->Picture->LoadFromFile(aPath + Pictures->Strings[n]);
+	ListBox1->ItemIndex = n;
+	}
+	catch ( EInvalidGraphic &e)
+	{
+	Form1->Image1->Picture->Graphic = NULL;
+	return;
+	}
+	Form1->Caption = "Просмотр иллюстраций — " +
+	aPath + Pictures->Strings[n];
+	if ( n == (Pictures->Count -1) )
+	SpeedButton2->Enabled = false;
+	// если кнопка "Предыдущая" недоступна,
+	// сделать ее доступной
+	if ( (n > 0 ) && ( SpeedButton3->Enabled == false))
+	SpeedButton3->Enabled = true;
+}
+//---------------------------------------------------------------------------
+
+// вывод предыдущей картинки
+void __fastcall TForm1::SpeedButton3Click(TObject *Sender)
+{
+	// вывести картинку
+	n--;
+	try
+	{
+	Image1->Picture->LoadFromFile(aPath + Pictures->Strings[n]);
+	ListBox1->ItemIndex = n;
+	}
+	catch ( EInvalidGraphic &e)
+	{
+	Form1->Image1->Picture->Graphic = NULL;
+	return;
+	}
+	Form1->Caption = "Просмотр иллюстраций — " +
+	aPath + Pictures->Strings[n];
+	if ( n == 0 )
+	SpeedButton3->Enabled = false;
+	// если кнопка "Следующая" недоступна,
+	// сделать ее доступной
+	if ( (n < Pictures->Count) && (SpeedButton2->Enabled == false) )
+	SpeedButton2->Enabled = true;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::N3Click(TObject *Sender)
+{
+	Form1->Close();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::N6Click(TObject *Sender)
+{
+	Form2 = new TForm2( this );
+	try {
+	  Form2->ShowModal();
+	} __finally {
+	  Form2->Free();
+	}
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::ScrollBox1MouseWheelDown(TObject *Sender, TShiftState Shift,
+          TPoint &MousePos, bool &Handled)
+{
+	ScrollBox1->VertScrollBar->Position += 20;
+    Handled = True;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::ScrollBox1MouseWheelUp(TObject *Sender, TShiftState Shift,
+          TPoint &MousePos, bool &Handled)
+{
+	ScrollBox1->VertScrollBar->Position -= 20;
+	Handled = True;
+}
+//---------------------------------------------------------------------------
+
+/*void __fastcall TForm1::ScrollBox1MouseEnter(TObject *Sender)
+{
+	ScrollBox1->SetFocus();
+} */
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::SpeedButton4Click(TObject *Sender)
+{
+	int w,h;
+	w = Image1->Width;
+	h = Image1->Height;
+	Image1->Width += 0.1*w;
+	Image1->Height += 0.1*h;
+	Image1->Stretch = true;
+	Image1->AutoSize = false;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::SpeedButton5Click(TObject *Sender)
+{
+	int w,h;
+	w = Image1->Width;
+	h = Image1->Height;
+	Image1->Width -= 0.1*w;
+	Image1->Height -= 0.1*h;
+	Image1->Stretch = true;
+	Image1->AutoSize = false;
+}
+//---------------------------------------------------------------------------
+
+
+void __fastcall TForm1::Image1MouseEnter(TObject *Sender)
+{
+	ScrollBox1->SetFocus();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::ListBox1Click(TObject *Sender)
+{
+	AnsiString FileName;
+	FileName = aPath + ListBox1->Items->Strings[ListBox1->ItemIndex];
+	Image1->Picture->LoadFromFile(FileName);
+	n = ListBox1->ItemIndex;
+	if ( (n < Pictures->Count) && (SpeedButton2->Enabled == false) )
+	SpeedButton2->Enabled = true;
+	if ( (n == (Pictures->Count)-1) )
+	SpeedButton2->Enabled = false;
+	if ( (n > 0 ) && ( SpeedButton3->Enabled == false))
+	SpeedButton3->Enabled = true;
+	if ( (n == 0 ))
+	SpeedButton3->Enabled = false;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::ListBox1MouseEnter(TObject *Sender)
+{
+	ListBox1->SetFocus();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm1::N5Click(TObject *Sender)
+{
+	Form3 = new TForm3( this );
+	try {
+	  Form3->ShowModal();
+	} __finally {
+	  Form3->Free();
+	}
+}
+//---------------------------------------------------------------------------
+
